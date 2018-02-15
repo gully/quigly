@@ -1,0 +1,53 @@
+%% rnaastex.cls is the classfile used for Research Notes. It is derived
+%% from aastex61.cls with a few tweaks to allow for the unique format required.
+\documentclass{rnaastex}
+
+%% Define new commands here
+\newcommand\latex{La\TeX}
+
+\begin{document}
+
+\title{Inference of the K2 PSF}
+
+%% Note that the corresponding author command and emails has to come
+%% before everything else. Also place all the emails in the \email
+%% command instead of using multiple \email calls.
+\correspondingauthor{Michael Gully-Santiago}
+\email{igully@gmail.com}
+
+\author[0000-0002-4020-3457]{Michael Gully-Santiago}
+\affiliation{Kepler/K2 Guest Observer Office \\
+NASA Ames Research Center \\
+Moffett Blvd \\
+Mountain View, CA 94035, USA}
+\affiliation{Bay Area Environmental Reaearch Institute}
+
+%% See the online documentation for the full list of available subject
+%% keywords and the rules for their use.
+\keywords{methods: statistical, techniques: image processing, methods: data analysis}
+
+%% Start the main body of the article. If no sections in the
+%% research note leave the \section call blank to make the title.
+\section{}
+
+We infer PSFs in Kepler data.  Here is a citation: \cite{2015Natur.521..332O}.
+
+%%%%%%%FIGURE%%%%%%%
+%\begin{figure}[h!]
+%\begin{center}
+%        \includegraphics[scale=0.85,angle=0]{figa.pdf}
+%\caption{Demo of our K2 PSF inferred from data\label{fig:1}}
+%\end{center}
+%\end{figure}
+
+\acknowledgments
+
+This research has made use of NASA's Astrophysics Data System.  The reproducible Jupyter Notebook that generated the figures in this document are freely available \href{https://github.com/gully/quigly}{on GitHub}.
+
+\begin{thebibliography}{}
+
+\bibitem[Olling et al.(2015)]{2015Natur.521..332O} Olling, R.~P., Mushotzky, R., Shaya, E.~J., et al.\ 2015, \nat, 521, 332
+
+\end{thebibliography}
+
+\end{document}
