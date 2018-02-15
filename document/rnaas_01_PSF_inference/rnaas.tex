@@ -32,6 +32,44 @@ Mountain View, CA 94035, USA}
 
 We infer PSFs in Kepler data.  Here is a citation: \cite{2015Natur.521..332O}.
 
+\section{PSF photometry for Kepler}
+Astronomical photometry has conventionally followed two paths: aperture photometry or Point Spread Function (PSF) photometry.  Point spread function photometry excels in crowded regions and in low Signal-to-Noise ($S/N$) ratio regimes.  Kepler/K2 mission time-series imaging of star clusters and extended objects will benefit from PSF photometry.  The large computational cost of PSF photometry has hampered its application to crowded fields in Kepler/K2, slowing the unbiased analysis of existing valuable data. In this research note, we lay the foundation for the application of GPU-acceleration applied to PSF photometry, demonstrating a speed-up over conventional computational methods.  We apply our method to both synthetic data, recovering unbiased estimates of our inputs, and real K2 data.  In the latter case we derive the Kepler PSF itself, the individual fluxes of stars, and the covariance among all inferred stars.  Recent advances in GPU acceleration hardware and associated software libraries offer avenues for performance improvements in other domains in astrophysical data analysis.
+
+\section{Methodology}
+We make these basic assumptions about our problem structure:
+
+\begin{enumerate}
+  \item All sources are point sources.
+  \item There are exactly $N_{\star}$ sources.
+  \item All sources share the same PSF.
+  \item All pixels share the same response function.
+  \item The PSF is drawn from Gaussian Mixture Model with $N_{GMM} = 3$ unknown components.
+  \item Each source has 3 parameters-- $x_c, y_c$ center location and flux amplitude, $z$.
+  \item Each PSF component has 5 parameters-- relative $(x, y)$ location; amplitude; and covariance matrix parameters $(\phi_1, \phi_2, \phi_3)$.
+  \item No PSFs are saturated.
+  \item All pixels share the same known Gaussian read noise $\sigma_{r}$.
+  \item The flat field is uniform, or equivalently has already been corrected perfectly.
+\end{enumerate}
+
+The above assumptions yield a total number of parameters, $N_{\mathrm{param}} = 3 N_\star + 5N_{GMM}$.  We fix one of the Gaussian Mixture Model components, assigning $x_j,y_j = 0,0 $.
+
+We identified two nearly identical procedures for calculating the likelihood.  In procedure I, we instantiate $N_\star$ delta functions in a sub-sampled pixel grid, convolve a model PSF with the delta functions, and sum the sub-sampled pixels in a Kepler Pixel.  In procedure II, instantiate $N_\star$ model PSFs, evaluating the
+
+-  Option 1: Delta functions convolved with PSF, undersampling
+-  Option 2: PSF evaluated at each star
+-  Source of PSFs (catalog or source extraction)
+-  PSF is pixel convolved
+-  Linearizable problem
+-  GPUs can accelerate solution
+
+4. Application- PSF photometry
+  - Synthetic data generation
+  - Application to synthetic data
+  - Application to real patch of FFI
+
+
+
+
 %%%%%%%FIGURE%%%%%%%
 %\begin{figure}[h!]
 %\begin{center}
