@@ -5,6 +5,11 @@
 %% Define new commands here
 \newcommand\latex{La\TeX}
 
+\newcommand{\vM}{\mathsf{M}}
+\newcommand{\vD}{\mathsf{D}}
+\newcommand{\vR}{\mathsf{R}}
+\newcommand{\vC}{\mathsf{C}}
+
 \begin{document}
 
 \title{Inference of the K2 PSF}
@@ -45,7 +50,7 @@ We make these basic assumptions about our problem structure:
   \item All pixels share the same response function.
   \item The PSF is drawn from Gaussian Mixture Model with $N_{GMM} = 3$ unknown components.
   \item Each source has 3 parameters-- $x_c, y_c$ center location and flux amplitude, $z$.
-  \item Each PSF component has 5 parameters-- relative $(x, y)$ location; amplitude; and covariance matrix parameters $(\phi_1, \phi_2, \phi_3)$.
+  \item Each PSF component has 5 parameters-- relative $(x_m, y_m)$ location; amplitude; and covariance matrix parameters $(\phi_1, \phi_2, \phi_3)$.
   \item No PSFs are saturated.
   \item All pixels share the same known Gaussian read noise $\sigma_{r}$.
   \item The flat field is uniform, or equivalently has already been corrected perfectly.
@@ -53,13 +58,27 @@ We make these basic assumptions about our problem structure:
 
 The above assumptions yield a total number of parameters, $N_{\mathrm{param}} = 3 N_\star + 5N_{GMM}$.  We fix one of the Gaussian Mixture Model components, assigning $x_j,y_j = 0,0 $.
 
-We identified two nearly identical procedures for calculating the likelihood.  In procedure I, we instantiate $N_\star$ delta functions in a sub-sampled pixel grid, convolve a model PSF with the delta functions, and sum the sub-sampled pixels in a Kepler Pixel.  In procedure II, instantiate $N_\star$ model PSFs, evaluating the
+We identified two nearly identical procedures for calculating the likelihood.  In procedure I, we instantiate $N_\star$ delta functions in a sub-sampled pixel grid, convolve a model PSF with the delta functions, and sum the sub-sampled pixels in a Kepler Pixel.  In procedure II, instantiate $N_\star$ model PSFs, evaluating the model at each pixel center.  We anticipate that these two procedures produce the same results, but procedure II is likely to possess smoother derivatives than procedure I, resulting in higher numerical performance.  Procedure II can only be carried out assuming statement number 4 above holds.  We adopted procedure II.  The source of the PSFs can be either source detection in the local image (\emph{e.g. Source Extractor}), or an outside deep catalog in a similar bandpass (\emph{e.g. Gaia}).  We performed source detection for the current note.
 
--  Option 1: Delta functions convolved with PSF, undersampling
--  Option 2: PSF evaluated at each star
--  Source of PSFs (catalog or source extraction)
--  PSF is pixel convolved
--  Linearizable problem
+The models are:
+
+\begin{eqnarray}
+y_{\mathrm{PSF}} = \sum_j^{N_{\mathrm{GMM}}} A_j G(x, \sigma) \\
+\hat y = \sum_i^{N_\star} y_{\mathrm{PSF}}
+\end{eqnarray}
+
+The residual is then:
+
+\begin{eqnarray}
+\vR = y - \hat y = y - \sum_i^{N_\star} y_{\mathrm{PSF}}
+\end{eqnarray}
+
+We can rewrite the sums as matrix products, defining new matrices:
+
+\begin{eqnarray}
+A
+\end{eqnarray}
+
 -  GPUs can accelerate solution
 
 4. Application- PSF photometry
