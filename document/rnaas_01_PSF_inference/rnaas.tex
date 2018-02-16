@@ -9,6 +9,11 @@
 \newcommand{\vD}{\mathsf{D}}
 \newcommand{\vR}{\mathsf{R}}
 \newcommand{\vC}{\mathsf{C}}
+\newcommand{\vA}{\mathsf{A}}
+\newcommand{\va}{\mathsf{a}}
+\newcommand{\vF}{\mathsf{F}}
+\newcommand{\vy}{\mathsf{y}}
+\newcommand{\trans}{\mathsf{T}}
 
 \begin{document}
 
@@ -48,38 +53,52 @@ We make these basic assumptions about our problem structure:
   \item There are exactly $N_{\star}$ sources.
   \item All sources share the same PSF.
   \item All pixels share the same response function.
-  \item The PSF is drawn from Gaussian Mixture Model with $N_{GMM} = 3$ unknown components.
-  \item Each source has 3 parameters-- $x_c, y_c$ center location and flux amplitude, $z$.
-  \item Each PSF component has 5 parameters-- relative $(x_m, y_m)$ location; amplitude; and covariance matrix parameters $(\phi_1, \phi_2, \phi_3)$.
+  \item The PSF is drawn from a Gaussian Mixture Model with $N_{GMM} = 3$ unknown components.
+  \item Each source has 3 parameters-- $x_c, y_c$ center locations and flux amplitude, $f$.
+  \item Each PSF component has 5 parameters-- relative $(x_j, y_j)$ location; amplitude $z_j$; and bivariate covariance matrix $C_j$, which is comprised of 3 parameters $(\phi_a, \phi_b, \phi_c)$.
   \item No PSFs are saturated.
-  \item All pixels share the same known Gaussian read noise $\sigma_{r}$.
+  \item All pixels have known, homoscedastic Gaussian read noise $\sigma_{r}$.
   \item The flat field is uniform, or equivalently has already been corrected perfectly.
+  \item There are $N_{pix}$ pixels in the scene.
 \end{enumerate}
 
-The above assumptions yield a total number of parameters, $N_{\mathrm{param}} = 3 N_\star + 5N_{GMM}$.  We fix one of the Gaussian Mixture Model components, assigning $x_j,y_j = 0,0 $.
+We fix the zeroth Gaussian Mixture Model components $x_0,y_0, z_0 \equiv 0, 0, 1 $, and enforce $z_{j+1} < z_{j}$.  We \emph{should} enforce normalization $\int \mathcal{K} \,dx\,dy = 1$, but we do not for computational simplicity. The above assumptions yield a total number of parameters, $N_{\mathrm{param}} = 3 N_\star + 5N_{GMM} - 3$.
 
 We identified two nearly identical procedures for calculating the likelihood.  In procedure I, we instantiate $N_\star$ delta functions in a sub-sampled pixel grid, convolve a model PSF with the delta functions, and sum the sub-sampled pixels in a Kepler Pixel.  In procedure II, instantiate $N_\star$ model PSFs, evaluating the model at each pixel center.  We anticipate that these two procedures produce the same results, but procedure II is likely to possess smoother derivatives than procedure I, resulting in higher numerical performance.  Procedure II can only be carried out assuming statement number 4 above holds.  We adopted procedure II.  The source of the PSFs can be either source detection in the local image (\emph{e.g. Source Extractor}), or an outside deep catalog in a similar bandpass (\emph{e.g. Gaia}).  We performed source detection for the current note.
 
 The models are:
 
 \begin{eqnarray}
-y_{\mathrm{PSF}} = \sum_j^{N_{\mathrm{GMM}}} A_j G(x, \sigma) \\
-\hat y = \sum_i^{N_\star} y_{\mathrm{PSF}}
+\mathcal{K}_{\mathrm{PSF}} = \sum_{j=0}^{N_{\mathrm{GMM}}} z_j \mathcal{G}(x_j, y_j, C_j) \\
+\hat I = \sum_i^{N_\star} f_i \cdot \mathcal{K}_{\mathrm{PSF}}
 \end{eqnarray}
 
-The residual is then:
+The bivariate Gaussian mixture model positive semidefinite covariance matrix can be written down as:
+\begin{eqnarray}
+   C_j=
+  \left[ {\begin{array}{cc}
+   e^{2 \phi_a} & \;\;\phi_c e^{\phi_a} \\
+   \phi_c e^{\phi_a} & \;\;\phi_c^2 +e^{2\phi_b} \\
+  \end{array} } \right]
+\end{eqnarray}
+
+
+We can rewrite the sums as matrix products.  We assign $ \vD $ as the $N_{pix} \times 1$ column vector mapping all data pixel values from the 2D image onto a 1D vector.  The vector $ \va $ is the 2D PSF model for the $i^{th}$ star mapped onto an $N_{pix} \times 1$ one-dimensional column vector.  The matrix $\vA$ represents the column-wise concatenation of the $N_{\star}$ models, yielding an $N_{pix} \times N_{\star}$ matrix.  The vector $\vF$ contains the $N_{\star}$ PSF flux amplitudes $f_i$.  We can then compute the maximum likelihood flux amplitudes:
 
 \begin{eqnarray}
-\vR = y - \hat y = y - \sum_i^{N_\star} y_{\mathrm{PSF}}
+\vF^{*} = (\vA^{\trans} \vA)^{-1}(\vA^{\trans} \vD)
 \end{eqnarray}
 
-We can rewrite the sums as matrix products, defining new matrices:
+This pre-processing step eliminates $N_\star$ linear parameters (the $f_i$'s) from the $N_{\mathrm{param}}$ parameters, and delivers the covariance among the inferred amplitudes.  We derive the non-linear parameters by minimizing $\chi^2$:
 
 \begin{eqnarray}
-A
+\vM &=& \vA \cdot \vF^{\star} \\
+\vR &=& \vD - \vM \\
+  \ln{p(\vD | \vM)} &=& -\frac{1}{2} \left( \vR^\trans \vC^{-1} \vR + \ln{\det{\vC}} + N_{\rm pix} \ln{2\pi} \right)
 \end{eqnarray}
 
--  GPUs can accelerate solution
+where $\vC$ is the pixel noise covariance matrix.  For our current assumption of homoscedastic read noise $\vC = \sigma_r \mathcal{I}$ where $\mathcal{I}$ is the diagonal identity matrix.
+
 
 4. Application- PSF photometry
   - Synthetic data generation
