@@ -7,11 +7,15 @@
 
 \newcommand{\vM}{\mathsf{M}}
 \newcommand{\vD}{\mathsf{D}}
+\newcommand{\vd}{\mathsf{d}}
+\newcommand{\vrr}{\mathsf{r}}
+\newcommand{\vm}{\mathsf{m}}
 \newcommand{\vR}{\mathsf{R}}
 \newcommand{\vC}{\mathsf{C}}
 \newcommand{\vA}{\mathsf{A}}
 \newcommand{\va}{\mathsf{a}}
 \newcommand{\vF}{\mathsf{F}}
+\newcommand{\vf}{\mathsf{f}}
 \newcommand{\vy}{\mathsf{y}}
 \newcommand{\trans}{\mathsf{T}}
 
@@ -54,7 +58,7 @@ We make these basic assumptions about our problem structure:
   \item All sources share the same PSF.
   \item All pixels share the same response function.
   \item The PSF is drawn from a Gaussian Mixture Model with $N_{GMM} = 3$ unknown components.
-  \item Each source has 3 parameters-- $x_c, y_c$ center locations and flux amplitude, $f$.
+  \item Each source has 3 parameters-- $x_{\star,i}, y_{\star,i}$ center locations and flux amplitude, $f_i$.
   \item Each PSF component has 5 parameters-- relative $(x_j, y_j)$ location; amplitude $z_j$; and bivariate covariance matrix $C_j$, which is comprised of 3 parameters $(\phi_a, \phi_b, \phi_c)$.
   \item No PSFs are saturated.
   \item All pixels have known, homoscedastic Gaussian read noise $\sigma_{r}$.
@@ -62,39 +66,29 @@ We make these basic assumptions about our problem structure:
   \item There are $N_{pix}$ pixels in the scene.
 \end{enumerate}
 
-We fix the zeroth Gaussian Mixture Model components $x_0,y_0, z_0 \equiv 0, 0, 1 $, and enforce $z_{j+1} < z_{j}$.  We \emph{should} enforce normalization $\int \mathcal{K} \,dx\,dy = 1$, but we do not for computational simplicity. The above assumptions yield a total number of parameters, $N_{\mathrm{param}} = 3 N_\star + 5N_{GMM} - 3$.
+We fix the first Gaussian Mixture Model components $x_1,y_1 \equiv 0, 0$, enforce $z_{j+1} < z_{j}$, and enforce normalization $\int \mathcal{K} \,dx\,dy = 1$. The above assumptions yield a total number of parameters, $N_{\mathrm{param}} = 3 N_\star + 6 N_{GMM} - 3$.
 
 We identified two nearly identical procedures for calculating the likelihood.  In procedure I, we instantiate $N_\star$ delta functions in a sub-sampled pixel grid, convolve a model PSF with the delta functions, and sum the sub-sampled pixels in a Kepler Pixel.  In procedure II, instantiate $N_\star$ model PSFs, evaluating the model at each pixel center.  We anticipate that these two procedures produce the same results, but procedure II is likely to possess smoother derivatives than procedure I, resulting in higher numerical performance.  Procedure II can only be carried out assuming statement number 4 above holds.  We adopted procedure II.  The source of the PSFs can be either source detection in the local image (\emph{e.g. Source Extractor}), or an outside deep catalog in a similar bandpass (\emph{e.g. Gaia}).  We performed source detection for the current note.
 
 The models are:
 
 \begin{eqnarray}
-\mathcal{K}_{\mathrm{PSF}} = \sum_{j=0}^{N_{\mathrm{GMM}}} z_j \mathcal{G}(x_j, y_j, C_j) \\
-\hat I = \sum_i^{N_\star} f_i \cdot \mathcal{K}_{\mathrm{PSF}}
+\mathcal{K}_{\mathrm{PSF}} = \sum_{j=0}^{N_{\mathrm{GMM}}} z_j \mathcal{G}(x-x_j, y-y_j, C_j) \\
+\hat I(x,y) = \sum_i^{N_\star} f_i \cdot \mathcal{K}_{\mathrm{PSF}}(x-x_{\star, i}, y-y_{\star, i})
 \end{eqnarray}
 
-The bivariate Gaussian mixture model positive semidefinite covariance matrix can be written down as:
+We can rewrite the sums as matrix products.  We assign $ \vd $ as the $N_{pix} \times 1$ column vector mapping all data pixel values from the 2D image onto a 1D vector.  The vector $ \va $ is the 2D PSF model for the $i^{th}$ star mapped onto an $N_{pix} \times 1$ one-dimensional column vector.  The matrix $\vA$ represents the column-wise concatenation of the $N_{\star}$ models $\va_{i}$, yielding an $N_{pix} \times N_{\star}$ matrix.  The vector $\vf$ contains the $N_{\star}$ PSF flux amplitudes $f_i$.  We can analytically compute the ``profile likelihood'' flux amplitudes:
+
 \begin{eqnarray}
-   C_j=
-  \left[ {\begin{array}{cc}
-   e^{2 \phi_a} & \;\;\phi_c e^{\phi_a} \\
-   \phi_c e^{\phi_a} & \;\;\phi_c^2 +e^{2\phi_b} \\
-  \end{array} } \right]
+\vf^{*} = (\vA^{\trans} \vC^{-1} \vA)^{-1}(\vA^{\trans} \vC^{-1} \vd)
 \end{eqnarray}
 
-
-We can rewrite the sums as matrix products.  We assign $ \vD $ as the $N_{pix} \times 1$ column vector mapping all data pixel values from the 2D image onto a 1D vector.  The vector $ \va $ is the 2D PSF model for the $i^{th}$ star mapped onto an $N_{pix} \times 1$ one-dimensional column vector.  The matrix $\vA$ represents the column-wise concatenation of the $N_{\star}$ models, yielding an $N_{pix} \times N_{\star}$ matrix.  The vector $\vF$ contains the $N_{\star}$ PSF flux amplitudes $f_i$.  We can then compute the maximum likelihood flux amplitudes:
-
-\begin{eqnarray}
-\vF^{*} = (\vA^{\trans} \vA)^{-1}(\vA^{\trans} \vD)
-\end{eqnarray}
-
-This pre-processing step eliminates $N_\star$ linear parameters (the $f_i$'s) from the $N_{\mathrm{param}}$ parameters, and delivers the covariance among the inferred amplitudes.  We derive the non-linear parameters by minimizing $\chi^2$:
+Computing the $\vf^{*}$ analytically eliminates $N_\star$ linear parameters (the $f_i$'s) from the $N_{\mathrm{param}}$ parameters, and delivers the covariance among the inferred amplitudes.  We derive the non-linear parameters by minimizing $\chi^2$:
 
 \begin{eqnarray}
-\vM &=& \vA \cdot \vF^{\star} \\
-\vR &=& \vD - \vM \\
-  \ln{p(\vD | \vM)} &=& -\frac{1}{2} \left( \vR^\trans \vC^{-1} \vR + \ln{\det{\vC}} + N_{\rm pix} \ln{2\pi} \right)
+\vm &=& \vA \cdot \vf^{*} \\
+\vrr &=& \vd - \vm \\
+  \ln{p(\vd | \vm)} &=& -\frac{1}{2} \left( \vrr^\trans \vC^{-1} \vrr + \ln{\det{\vC}} + N_{pix} \ln{2\pi} \right)
 \end{eqnarray}
 
 where $\vC$ is the pixel noise covariance matrix.  For our current assumption of homoscedastic read noise $\vC = \sigma_r \mathcal{I}$ where $\mathcal{I}$ is the diagonal identity matrix.
@@ -106,7 +100,30 @@ where $\vC$ is the pixel noise covariance matrix.  For our current assumption of
   - Application to real patch of FFI
 
 
+\section{Appendix}
 
+Here we clarify the notation and offer additional mathematical transformations used in this note.  The normalized Gaussian mixture model takes the form:
+
+\begin{eqnarray}
+\mathcal{G} &=& \frac{1}{2 \pi \sqrt{\det{C_j} }} e^{-\frac{1}{2} \vec{r}^{\trans} C_j^{-1} \vec{r}}
+\end{eqnarray}
+
+with $\vec{r}=\vec{x}+\vec{y}$ representing the distance vector.  The Kernel and data positions refer to their respective reference frames, with Kernels representing continuous variables and data spaces representing pixel coordinates.  The bivariate Gaussian mixture model covariance matrix can be written down as:
+\begin{eqnarray}
+   C_j=
+  \left[ {\begin{array}{cc}
+   e^{2 \phi_a} & \;\;\phi_c e^{\phi_a} \\
+   \phi_c e^{\phi_a} & \;\;\phi_c^2 +e^{2\phi_b} \\
+  \end{array} } \right]
+\end{eqnarray}
+
+which enforces positive scale factors and positive semidefinite matrices.  Enforcing normalization $\int \mathcal{K} \,dx\,dy \equiv 1$ results in $\sum_{j=0}^{N_{\mathrm{GMM}}} z_j = 1$.  We apply several transformations for computational expediency:
+
+\begin{eqnarray}
+z_j - z_{j-1} &=& e^{-\theta_j} \\
+z_1 &=& \frac{1}{1 + \sum_{j=2}^{N_{\mathrm{GMM}}} z_j} \\
+\theta_{j} >0
+\end{eqnarray}
 
 %%%%%%%FIGURE%%%%%%%
 %\begin{figure}[h!]
