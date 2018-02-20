@@ -52,19 +52,22 @@ def get_A_matrix(x, y, x_c, y_c, kernel_params):
     yy = y[:, np.newaxis] - y_c.T
     A_matrix = np.zeros(xx.shape)
     for i in range(N_stars):
-        A_matrix[:, i] = compute_model_a(xx[:,i], yy[:,i],*kernel_params)
+        z_js, x_js, y_js, phi_as, phi_bs, phi_cs = kernel_params.T
+        A_matrix[:, i] = compute_model_a(xx[:,i], yy[:,i],
+                                         z_js, x_js, y_js, phi_as, phi_bs, phi_cs)
     return A_matrix
 
 def split_params(params, N_star, N_GMM):
     '''Split/clean all parameters into star and Kernel parameters'''
-    star_params = params[0:N_star*2].reshape(N_star)
-    kern_params = np.stack([[1, 0, 0], params[N_star*2:]]).reshape(N_GMM)
-    kern_params[1:, 0] = gmm_z_js(kern_params[1:, 0])
+    star_params = params[0:N_star*2].reshape((N_star, -1))
+    fixed_gmm_params = np.array([1, 0, 0])
+    kern_params = np.hstack([fixed_gmm_params, params[N_star*2:]]).reshape((N_GMM, -1))
+    kern_params[:, 0] = gmm_z_js(kern_params[1:, 0])
     return star_params, kern_params
 
 def lnlike(params):
     '''Return the likelihood given the parameters'''
-    star_params, kern_params = split_params(params)
+    star_params, kern_params = split_params(params, 4, 3)
 
     x_c, y_c = star_params[0, :], star_params[1, :]
 
@@ -80,4 +83,4 @@ def lnlike(params):
     model = np.dot(A_matrix, f_star)
     resid = data - model
     lnlike_out = np.dot(resid.T, resid / yerr**2)
-    return 0.0
+    return lnlike_out
